@@ -40,22 +40,49 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+
 // POST new alert
 router.post("/", async (req, res) => {
   try {
-    const alert = new Alert(req.body);
+    const alert = new Alert({
+      deviceId: req.body.deviceId || "WS001",
+      type: req.body.type || "SOS",
+      threatLevel: req.body.threatLevel || "DANGER",
+      heartRate: req.body.heartRate,
+      gsr: req.body.gsr,
+      movement: req.body.movement,
+      latitude: req.body.latitude,
+      longitude: req.body.longitude,
+      message: req.body.message || "SOS Emergency! Help required.",
+      status: "ACTIVE"
+    });
 
     const savedAlert = await alert.save();
 
-    res.status(201).json(savedAlert);
+    // Send alert to React dashboard
+    const io = req.app.get("io");
+
+    if (io) {
+      io.emit("alertCreated", savedAlert);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "SOS alert created successfully",
+      alert: savedAlert
+    });
+
   } catch (error) {
     console.error("Error creating alert:", error);
 
     res.status(500).json({
-      message: "Failed to create alert"
+      success: false,
+      message: "Failed to create alert",
+      error: error.message
     });
   }
 });
+
 
 // Resolve alert
 router.put("/:id/resolve", async (req, res) => {

@@ -19,18 +19,15 @@ const alertSchema = new mongoose.Schema(
     },
 
     heartRate: {
-      type: Number,
-      required: true
+      type: Number
     },
 
     gsr: {
-      type: Number,
-      required: true
+       type: Number
     },
 
     movement: {
-      type: String,
-      required: true
+       type: String
     },
 
     temperature: {
