@@ -1,3 +1,4 @@
+
 const express = require("express");
 const router = express.Router();
 
@@ -6,9 +7,7 @@ const Alert = require("../models/Alert");
 // GET all alerts
 router.get("/", async (req, res) => {
   try {
-    const alerts = await Alert.find()
-      .sort({ timestamp: -1 });
-
+    const alerts = await Alert.find().sort({ timestamp: -1 });
     res.json(alerts);
   } catch (error) {
     console.error("Error fetching alerts:", error);
@@ -40,8 +39,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-
-// POST new alert
+// POST new SOS alert
 router.post("/", async (req, res) => {
   try {
     const alert = new Alert({
@@ -57,13 +55,19 @@ router.post("/", async (req, res) => {
       status: "ACTIVE"
     });
 
+    // Save alert to MongoDB
     const savedAlert = await alert.save();
+
+    console.log("SOS SAVED TO DATABASE:", savedAlert);
 
     // Send alert to React dashboard
     const io = req.app.get("io");
 
     if (io) {
+      console.log("SOS EVENT EMITTED:", savedAlert);
       io.emit("alertCreated", savedAlert);
+    } else {
+      console.log("Socket.IO not available");
     }
 
     res.status(201).json({
@@ -83,18 +87,13 @@ router.post("/", async (req, res) => {
   }
 });
 
-
 // Resolve alert
 router.put("/:id/resolve", async (req, res) => {
   try {
     const alert = await Alert.findByIdAndUpdate(
       req.params.id,
-      {
-        status: "RESOLVED"
-      },
-      {
-        new: true
-      }
+      { status: "RESOLVED" },
+      { new: true }
     );
 
     if (!alert) {
@@ -104,6 +103,7 @@ router.put("/:id/resolve", async (req, res) => {
     }
 
     res.json(alert);
+
   } catch (error) {
     console.error("Error resolving alert:", error);
 
