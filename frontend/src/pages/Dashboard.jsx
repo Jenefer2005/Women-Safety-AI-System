@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 
 import Sidebar from "../components/Sidebar";
@@ -11,10 +12,6 @@ import socket from "../services/socket";
 
 const Dashboard = () => {
 
-  // ===============================
-  // SENSOR DATA
-  // ===============================
-
   const [sensorData, setSensorData] = useState({
     heartRate: 82,
     gsr: 430,
@@ -22,173 +19,86 @@ const Dashboard = () => {
     temperature: 36.6
   });
 
-
-  // ===============================
-  // SAFETY STATUS
-  // ===============================
-
   const [status, setStatus] = useState("SAFE");
 
-
-  // ===============================
-  // CHART DATA
-  // ===============================
+  const [alertMessage, setAlertMessage] = useState("");
 
   const [chartData, setChartData] = useState([
-
     {
       time: "10:00",
       heartRate: 78,
       gsr: 410,
       temperature: 36.5
     },
-
     {
       time: "10:05",
       heartRate: 80,
       gsr: 425,
       temperature: 36.6
     },
-
     {
       time: "10:10",
       heartRate: 82,
       gsr: 430,
       temperature: 36.6
     },
-
     {
       time: "10:15",
       heartRate: 84,
       gsr: 445,
       temperature: 36.7
     }
-
   ]);
 
-
-  // ===============================
-  // SOCKET CONNECTION
-  // ===============================
-
+  // Listen for ESP32 SOS alerts
   useEffect(() => {
 
-    socket.on("sensorUpdate", (data) => {
+    const handleSOS = (alert) => {
 
-      console.log("Received sensor data:", data);
+      console.log("SOS received:", alert);
 
+      if (
+        alert.type === "SOS" ||
+        alert.threatLevel === "DANGER"
+      ) {
+        setStatus("DANGER");
 
-      // Update sensor cards
+        setAlertMessage(
+          alert.message || "SOS Emergency! Help required."
+        );
+      }
 
-      setSensorData({
+    };
 
-        heartRate: data.heartRate,
-
-        gsr: data.gsr,
-
-        movement: data.movement,
-
-        temperature: data.temperature
-
-      });
-
-
-      // Update safety status
-
-      setStatus(data.status);
-
-
-      // Update chart
-
-      setChartData((previous) => {
-
-        const now = new Date();
-
-        const time =
-          now.toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit"
-          });
-
-
-        const newPoint = {
-
-          time: time,
-
-          heartRate: data.heartRate,
-
-          gsr: data.gsr,
-
-          temperature: data.temperature
-
-        };
-
-
-        // Keep only the latest 10 readings
-
-        return [
-          ...previous,
-          newPoint
-        ].slice(-10);
-
-      });
-
-    });
-
-
-    // Cleanup socket listener
+    socket.on("alertCreated", handleSOS);
 
     return () => {
-
-      socket.off("sensorUpdate");
-
+      socket.off("alertCreated", handleSOS);
     };
 
   }, []);
 
-
-  // ===============================
-  // DASHBOARD UI
-  // ===============================
-
   return (
-
     <div className="app-layout">
 
       <Sidebar />
-
 
       <main className="main-content">
 
         <Navbar />
 
+        <h1>Dashboard</h1>
 
-        <h1>
-          Dashboard
-        </h1>
-
-
-        <p>
-          Overview of real-time safety status
-        </p>
-
+        <p>Overview of real-time safety status</p>
 
         {/* SAFETY STATUS */}
 
-        <SafetyStatus
-          status={status}
-        />
+        <SafetyStatus status={status} />
 
         <AlertCard
-            status={status}
-             message={
-             status === "ALERT"
-             ? "Unusual activity detected."
-             : ""
-            }
+          status={status}
+          message={alertMessage}
         />
-
 
         {/* SENSOR CARDS */}
 
@@ -201,7 +111,6 @@ const Dashboard = () => {
             icon="❤️"
           />
 
-
           <SensorCard
             title="GSR (Stress)"
             value={sensorData.gsr}
@@ -209,14 +118,12 @@ const Dashboard = () => {
             icon="✋"
           />
 
-
           <SensorCard
             title="Movement"
             value={sensorData.movement}
             unit=""
             icon="🏃"
           />
-
 
           <SensorCard
             title="Temperature"
@@ -227,19 +134,12 @@ const Dashboard = () => {
 
         </div>
 
-
-        {/* SENSOR CHART */}
-
-        <SensorChart
-          data={chartData}
-        />
+        <SensorChart data={chartData} />
 
       </main>
 
     </div>
-
   );
-
 };
 
 export default Dashboard;
